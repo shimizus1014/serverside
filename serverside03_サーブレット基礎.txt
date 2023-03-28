@@ -1,0 +1,160 @@
+サーブレットの基礎
+
+ サーブレットとは、サーバーサイドプログラムをつくるための技術。
+ ブラウザからのリクエストによって実行されるサーブレットクラス
+ というクラスをサーブレット文法に従い記述する。
+ サーブレットクラスは、リクエストによって実行され、実行結果を
+ HTMLで出力します。
+ 
+サーブレットクラスの作成ルール
+
+ サーブレットクラスでは、3つのルールに沿ってクラスを定義します。
+ 
+ ルール① javax.servlet.http.HttpServletクラスを継承する
+   HttpServletクラスは、サーブレットクラスのもととなるクラスです。
+   このクラスを継承することで、サーブレットクラスという特別なクラスを
+   1から作成する必要がなくなります。
+ 
+ ルール② doGet()/doPost() どちらかをオーバーライドする
+   doGet()/doPost()は、サーブレットクラスがリクエストされると実行される
+   メソッドです。リクエストの内容によって実行されるメソッドが変わります。
+   考えながら記述しないと論理エラーを引き起こします。
+ 
+ ルール③ サーブレット関連のクラスをインポートする
+   サーブレット関連のクラスは、主に「javax.servlet」と「javax.servlet.http」
+   の両パッケージに入ってます。
+   
+
+サーブレットクラスの記述方法
+  p.84～参考
+
+サーブレットクラスの実行方法
+
+  サーブレットクラスのURLについて
+    サーブレットクラスはファイル名ではなくURLパターンというものを
+    URL中に指定します。URLパターンはサーブレットクラスをリクエスト
+    するときに使用する名前で、開発者が自由に設定することができます。
+  
+  URLパターンの設定方法
+    アノテーションというjava5からの新しいやり方
+    @WebServlet("指定"）でURLパターンを指定する。
+    ・昔ながらのやりかたで、xmlファイル（設定ファイル）
+      の情報を直接記述する方法
+    
+※ xmlファイル例
+   <?xml version="1.0" encoding="UTF-8"?>
+<web-app xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns="http://xmlns.jcp.org/xml/ns/javaee" xsi:schemaLocation="http://xmlns.jcp.org/xml/ns/javaee http://xmlns.jcp.org/xml/ns/javaee/web-app_3_1.xsd" id="WebApp_ID" version="3.1">
+  <display-name>example03</display-name>
+  <welcome-file-list>
+    <welcome-file>index.html</welcome-file>
+    <welcome-file>index.htm</welcome-file>
+    <welcome-file>index.jsp</welcome-file>
+    <welcome-file>default.html</welcome-file>
+    <welcome-file>default.htm</welcome-file>
+    <welcome-file>default.jsp</welcome-file>
+  </welcome-file-list>
+  <servlet>
+    <servlet-name>hello</servlet-name>
+    <servlet-class>sample.HelloServlet</servlet-class>
+  </servlet>
+  <servlet-mapping>
+    <servlet-name>hello</servlet-name>
+    <url-pattern>/hello.html</url-pattern>
+  </servlet-mapping>
+</web-app>
+  
+  実行方法（3つ）
+    方法①ブラウザを起動してURLを入力する
+      ブラウザを起動し、サーブレットクラスのURLを入力してリクエストします
+      （このとき、アプリケーションサーバを起動しておく必要があります）。
+    
+    方法② Eclipseの実行機能（付録A参照）を利用する
+      リクエストするサーブレットクラスを選択し、右クリックから「実行」→
+      「サーバで実行」を選択します
+    
+    方法③ サーブレットクラスへのリンクをクリックする
+      aタグを利用してサーブレットクラスへのリンクを作成します
+      <a href="/アプリケーション名/URLパターン">リンク文字列</a>
+
+サーブレットクラスサンプル文
+
+package sample;
+
+import java.io.IOException;
+import java.io.PrintWriter;
+import java.text.SimpleDateFormat;
+import java.util.Date;
+
+import javax.servlet.ServletException;
+import javax.servlet.annotation.WebServlet;
+import javax.servlet.http.HttpServlet;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+
+/**
+ * Servlet implementation class SampleServlet
+ */
+/*
+ * [注意] [p.095(p.096)]
+ * 既存のサーブレットクラスをコピーして作成した場合、URLパターンは自動変更されない！
+ * 必要に応じて、修正すること。
+ * ⇒ URLパターンが重複すると、サーバが起動しなくなる！！
+ */
+@WebServlet("/SampleServlet")
+public class SampleServlet extends HttpServlet {
+	private static final long serialVersionUID = 1L;
+	/*                          ↑クラス構造が変わっていないことを保証するための
+	 *                            名前の通り、バージョン管理するための値。
+	 *                            記述は残しても害はないので、残しておいて構わない！
+	 *
+	 */
+
+    /**
+     * @see HttpServlet#HttpServlet()
+     */
+
+	/**
+	 * @see HttpServlet#doGet(HttpServletRequest request, HttpServletResponse response)
+	 */
+
+	//以下Getがリクエストされた時に自動実行するdoGetメソッド。
+	//内容をレスポンス文でクライアントに返す。
+	protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
+		// TODO Auto-generated method stub
+//		response.getWriter().append("Served at: ").append(request.getContextPath());
+		//運勢をランダムで決定
+		String[] luckArray={"超スッキリ","スッキリ","最悪"};
+		int index=(int)(Math.random()*3);
+		String luck=luckArray[index];
+
+		//実行日を取得
+		Date date=new Date();
+		SimpleDateFormat sdf=new SimpleDateFormat("MM月dd日");
+		String today=sdf.format(date);
+
+		//HTMLを出力
+		response.setContentType("text/html; charset=UTF-8");ね
+		PrintWriter out=response.getWriter();
+	    out.println("<html>");
+	    out.println("<head>");
+	    out.println("<meta charset=\"UTF-8\"");
+	    out.println("<title>スッキリ占い</title>");
+	    out.println("</head>");
+	    out.println("<body>");
+	    out.println("<p>"+today+"の運勢は「"+luck+"」です<p>");
+
+
+
+	}
+
+    //Postがリクエストされた時に自動実行されるメソッド。
+    //サーブレットクラス生成時に自動生成される。
+	/**
+	 * @see HttpServlet#doPost(HttpServletRequest request, HttpServletResponse response)
+	 */
+	protected void doPost(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
+		// TODO Auto-generated method stub
+		doGet(request, response);
+	}
+
+}
