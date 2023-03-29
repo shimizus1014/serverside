@@ -1,0 +1,216 @@
+フォーム
+
+ フォームとは、クライアントから受け付けた入力に対応して処理するしくみ
+ のことです。
+ フォームを使うと、Webページに入力したデータをサーバサイドプログラムに
+ 送信することができます。
+ 
+HTMLの振り返り
+
+HTMLファイルの例
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>フォーム</title>
+</head>
+<body>
+<form action="/example05/FormSampleServlet" method="get">
+                ↑アプリケーション名から記述        ↑get or postの二択
+   部品に必ず『名前』をつけよう！
+<p><label for="username">名前：</label>
+<input type="text" name="username" />
+                     ↑必須！
+</p>
+<p>性別：
+ [例外]名前が重複する部品（ラジオボタン）
+男<input type="radio" name="gender" value="男" />
+                      ↑↓必須！同一値：同一グループ
+女<input type="radio" name="gender" value="女"/>
+                                        ↑この属性値が送信される
+</p>
+<p>
+[例外]名前が不要な部品（送信ボタン）
+                             ↓ボタン名に反映される　
+<input type="submit" value="送信" />
+                ↑フォームの情報をサーバに送信！（原則一つ）
+</p>
+</form>
+</body>
+</html>
+
+データ送信の仕組み
+
+ フォームの送信ボタンをクリックすると、フォームの部品に入力したデータは
+ 「部品名＝値」の形式で送信されます。この「部品名＝値」のことをリクエスト
+ パラメータといいます。[p.136]
+ リクエストパラメータは、送信の際に「URLエンコード」という変換処理が
+ 行われます。
+ URLエンコードはブラウザが使用している文字コードをもとに行われます。
+ そのため、サーバサイドプログラムでは、URLエンコードに使用された文字コード
+ と同じ文字コードを使って元に戻す必要があります。
+
+GETリクエストとPOSTリクエスト
+
+ リクエストパラメータを送信するリクエストのリクエストメソッドには、
+ GETまたはPOSTを使用します。どちらのリクエストメソッドを使用するかは、
+ フォームの作成者がformタグのmethod属性で決定します（P135参照）
+ 
+ GETリクエスト
+  ・リクエストによって新しい情報（Webページなど）を取得するような場合に使用
+  ・リクエストパラメータが、情報を取得するために利用される場合
+  ・[例]Google検索等
+ 
+ POSTリクエスト
+  ・リクエストによってフォームに入力した情報を登録するような場合に使用
+  ・リクエストパラメータが、情報の登録に利用される場合
+  ・[例]アンケートフォーム、掲示板への投稿
+
+リクエストパラメータの取得
+
+ 次は、アプリケーションサーバ側の処理について。
+ 受け取ったリクエストパラメータは、アプリケーションサーバによって、
+ 「HttpServletRequestインスタンス」に格納され、リクエスト先の
+ アプリケーションサーバの、サーブレットクラスに渡されます。
+ サーブレットクラスは、受け取ったインスタンスのメソッドを利用して、
+ リクエストパラメータを取り出すことができます。
+
+サーブレットクラス例文
+package servlet;パッケージ名
+
+必要なクラスをインポート
+--------------------------------------
+
+import java.io.IOException;
+
+import javax.servlet.ServletException;
+import javax.servlet.annotation.WebServlet;
+import javax.servlet.http.HttpServlet;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+
+----------------------------------------------------
+
+/**
+ * Servlet implementation class FormSampleServlet
+ */
+ --------------------------------
+@WebServlet("/FormSampleServlet")URLパターン指定
+----------------------------------
+public class FormSampleServlet extends HttpServlet {
+	private static final long serialVersionUID = 1L;
+
+    /**
+     * @see HttpServlet#HttpServlet()
+     */
+	/**
+	 * @see HttpServlet#doGet(HttpServletRequest request, HttpServletResponse response)
+	 */
+	protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
+		// TODO Auto-generated method stub
+		response.getWriter().append("Served at: ").append(request.getContextPath());
+	}
+
+	/**
+	 * @see HttpServlet#doPost(HttpServletRequest request, HttpServletResponse response)
+	 */
+	 
+	 以下postメソッド
+	 ---------------------------------------------------------------------
+	                 ↓フォームのmethod属性値と対応させる
+	protected void doPost(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
+		// TODO Auto-generated method stub
+	//	doGet(request, response);※postリクエスト時も、getメソッドを呼び出したい場合に使用
+		//リクエストパラメータの文字コードを指定
+		request.setCharacterEncoding("UTF-8");
+		//リクエストパラメータの取得
+		String username=request.getParameter("username");
+		                                      ↕部品の名前を指定して値を取得
+		String gender=request.getParameter("gender");
+		ここまでがリクエストインスタンスの取得、値の取り出し
+		
+		-------------------------------------------------------------------
+
+        以下、取り出した値を使用してHTMLを出力
+		//HTMLを出力
+		response.setContentType("text/html; charset=UTF-8");
+		java.io.PrintWriter out=response.getWriter();
+
+		out.println("<!DOCTYPE html>");
+		out.println("<html>");
+		out.println("<head>");
+		out.println("<meta charset=\"UTF-8\">");
+		out.println("<title>sample</title>");
+		out.println("</head>");
+		out.println("<body>");
+		out.println("<p>"+"名前："+username+"性別："+gender+"</p>");
+		out.println("</body>");
+		out.println("</html>");
+
+	}
+
+}
+
+各リクエストメソッドが使われるブラウザの操作
+
+  GETリクエストが送信されるのは…
+    ・アドレスバーにURLを入力したとき
+    ・リンクをクリックしたとき
+    ・ブックマーク（お気に入り）を選択したとき
+    ・method属性がgetのフォームの送信ボタンをクリックしたとき
+  
+  POSTリクエストが送信されるのは…
+    ・method属性がpostのフォームの送信ボタンをクリックしたとき
+
+JSPファイルでリクエストパラメータの値を取得する
+
+JSPファイル例
+<%@ page language="java" contentType="text/html; charset=UTF-8"
+    pageEncoding="UTF-8"%>
+<%
+request.setCharacterEncoding("UTF-8");
+  ↑暗黙オブジェクト（宣言せずに利用できるオブジェクト）
+String username=request.getParameter("username");
+String gender=request.getParameter("gender");
+%>
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>sample</title>
+</head>
+<body>
+<p>名前<%=username%>性別：<%=gender %></p>
+         スクリプト式     <%=out.print(gender);%>
+                          スクリプトレット（out：暗黙オブジェクト（[p.146]表5-1）
+</body>
+</html>
+
+  ※スクリプトレットまたはスクリプト式の中には、暗黙オブジェクトという、
+  宣言せずに利用できる特別なオブジェクトがあります。
+  これらのオブジェクトは定義済みのため、宣言せずに利用できます。
+
+
+p.151～の補足
+[正規表現]について
+  
+  文字列の集合（パターン）を表す汎用的な記法
+  [使用例]該当するパターンに一致する文字列を検索する
+
+メタ文字  意味            例
+------------------------------------------------------
+  ^       行頭            ^a    ：aで始まる文字列
+  $       行末            n$    ：nで終わる文字列
+[…]      論理和          [abc] ：abcのいずれか1文字
+  +       直前の文字が
+          1つ以上         c+    ：cが1つ以上連なる文字列
+ {}       繰り返し回数    {4}   ：直前の文字を4回繰り返す
+
+入力フォームからの値がnullか判断
+
+ if(変数==null || 変数.length()==0){
+             処理
+ }
+
+※ サーブレットクラス、jspふぁいるの書き方として、
+   処理文（論理式）とHTML文(body部分)を分けて書くことを意識しよう。
