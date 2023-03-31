@@ -1,0 +1,232 @@
+スコープの基本
+
+  スコープとは
+    前章では、JSPファイルとサーブレットクラスの繋げ方を学びましたが、
+    サーブレットクラスで作成したインスタンスを、JSPファイルでも使用
+    したい場面が多く出てきます。
+    そこで使用する領域がスコープというインスタンスを保存できる領域です。
+    スコープを経由させることでサーブレットクラスとJSPファイルでインスタンス
+    を共有することが可能になります。
+    スコープには、
+    ・ページスコープ
+    ・リクエストスコープ
+    ・セッションスコープ
+    ・アプリケーションスコープ
+    の4種類が存在し、種類によって有効期限が異なります。
+
+  スコープとインスタンス
+    スコープには、通常の基本データ型変数を保存することはできません。
+    スコープに保存できるのは、インスタンス「だけ」になります。
+
+  JavaBeans
+    スコープには、基本的に「JavaBeans」と呼ばれるクラスのインスタンスを
+    保存します。
+    JavaBeansとは、Javaクラスの独立性を高め、部品として再利用しやすく
+    するためのルール、またはそのルールを守っているクラスの総称です。
+
+  JavaBeansのルール
+    ①直列可能である（java.io.Serializableを実装している）。
+    ②クラスはpublicでパッケージに所属する。
+    ③publicで引数のないコンストラクタを持つ。
+    ④フィールドはカプセル化（隠蔽化）する。
+    ⑤命令規則に従ったgetter/setterを持つ。
+
+JavaBeansの例
+
+package model;②
+import java.io.Serializable; ①  //直列化可能である
+
+public class Human implements Serializable{
+②                             ↑
+                       マーカー・インタフェース
+                       →一定の特性を恩つクラスを識別するためのもの
+                       ※内容は何も記載されていない！
+    //フィールド（④private）
+	private String name;
+	private int age;
+
+    //コンストラクタ
+	public Human() {}  ③引数なしの（あるいはデフォルト）コンストラクタ
+	
+	public Human(String name,int age) {
+		this.name=name;
+		this.age=age;
+	}
+
+    //④⑤アクセサメソッド(外部向けの情報（プロパティ）が生まれる）
+	public String getName() {プロパティ：name(＝フィールド)
+		return this.name;
+	}
+	例
+	public String getNickName(){プロパティ：nickName(≠フィールド）
+		return this.name;
+	}
+	public void setName(String name) {
+		this.name=name;
+	}
+	public int getAge() {
+		return this.age;
+	}
+	public void setAge(int age) {
+		this.age=age;
+	}
+}
+
+ルール説明補足
+
+ルール① 直列化可能である
+  直列化を可能にするために「java.io.Serializable」インタフェースを実装します。
+  「直列化」とはインスタンスのフィールドの内容をバイト列に変換してファイルな
+  どに保存し、それをまたインスタンスに復元する技術。
+  つまり、外部媒体に書き出したり、使用したりすることができるクラスであるとい
+  うことです。
+
+ルール③
+  引数ありのコンストラクタがある場合、明示的に引数なしのコンストラクタを用意
+  しておく。インスタンスの自動生成の際に、引数なしのコンストラクタが無いと、
+  生成されない可能性がある。
+
+
+JavaBeansのプロパティ
+
+  JavaBeansのプロパティとは、インスタンスの属性のことです。
+  上記例の場合は、name age がプロパティ名となります。
+  単に、フィールドの値のことをプロパティというわけではありません。
+  
+  プロパティの定義
+    フィールドの値に対して、getter又はsetterが定義されていること。
+  
+  プロパティとフィールド
+    クラスから見て、内部情報をフィールド。外部に公開する情報をプロパティ
+    と言います。
+    なぜ、厳密に違うものかというと、プロパティ名とは、getter,setterで
+    指定された名前になるため、実際のフィールド名とは違っている場合もあるから
+    です。
+    [例]フィールド：String name プロパティ：public String getNickName(){
+        フィールド名→name      プロパティ名→nickname
+
+  WebアプリケーションにおけるJavaBeansの役割
+    関連する複数の情報をひとまとめにして保持することです。
+    上記例では、年齢と名前の2つの情報をまとめて保持します。
+    サーブレットクラスでは、複数の情報をJavaBeansにまとめて格納し、
+    そのJavaBeansをスコープに保存します。一方のJSPファイルでは、
+    そのJavaBeansをスコープから取り出すことで、複数の情報をまと
+    めて受け取ることができるのです。
+
+リクエストスコープの特徴
+
+  リクエストスコープは、リクエストごとに生成されるスコープです。
+  このスコープを保存したインスタンスは、レスポンスが返されるまで
+  利用することができます。
+
+リクエストスコープの基本操作
+
+  リクエストスコープの正体
+    リクエストスコープの正体は、HttpServletRequestインスタンスです。
+    リクエストスコープを操作するということは、上記インスタンスの
+    メソッドを使うことです。
+
+  リクエストスコープにインスタンスを保存
+    request.setAttribute("名前",インスタンス)
+                       String型  object型
+    ※すでに同じ属性名のインスタンスが保存されている場合上書き
+
+  リクエストスコープからインスタンスを取得
+    クラス型 インスタンス名=(キャスト)request.getAttribute("名前")
+    ※取得したインスタンスは元の型にキャストする必要がある！
+
+  JSPファイルでリクエストスコープを使う場合
+    暗黙オブジェクト「request」を使用
+
+リクエストスコープの設定、取り出し例
+
+リクエストスコープにインスタンスを格納するサーブレットクラス
+package servlet;
+
+import java.io.IOException;
+
+import javax.servlet.ServletException;
+import javax.servlet.annotation.WebServlet;
+import javax.servlet.http.HttpServlet;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+
+import model.Human;
+
+/**
+ * Servlet implementation class RequestServlet
+ */
+@WebServlet("/RequestServlet2JSP")
+public class RequestServlet2JSP extends HttpServlet {
+	private static final long serialVersionUID = 1L;
+
+    /**
+     * @see HttpServlet#HttpServlet()
+     */
+    public RequestServlet2JSP() {
+        super();
+        // TODO Auto-generated constructor stub
+    }
+
+	/**
+	 * @see HttpServlet#doGet(HttpServletRequest request, HttpServletResponse response)
+	 */
+	protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
+		// TODO Auto-generated method stub
+	//	response.getWriter().append("Served at: ").append(request.getContextPath());
+	    リクエストスコープにしまうためにインスタンスを生成（import済)
+		Human human=new Human("湊 雄輔",23) ;
+		リクエストスインスタンスのsetAttributeメソッドを用いて、
+		リクエストスコープにインスタンスを格納
+		                      要素名  Object型でインスタンスを受け取る
+		request.setAttribute("human", human);
+		
+		jspファイルにフォワード
+		javax.servlet.RequestDispatcher dispatcher=
+				request.getRequestDispatcher("/WEB-INF/Request.jsp");
+		dispatcher.forward(request,response);
+
+
+
+
+	}
+
+	/**
+	 * @see HttpServlet#doPost(HttpServletRequest request, HttpServletResponse response)
+	 */
+	protected void doPost(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
+		// TODO Auto-generated method stub
+		//doGet(request, response);
+	}
+
+}
+
+リクエストスコープの中身を取り出して使うjspファイル
+<%@ page language="java" contentType="text/html; charset=UTF-8"
+    pageEncoding="UTF-8"%>
+<%@ page import="model.Human" %>
+<%
+リクエストスコープに格納されていたHuman型のインスタンスを受け取る
+         Object型で格納されているので、Human型にダウンキャスト
+Human型のクラス型変数で受け取る（こちらもimport必要)
+Human h=(Human) request.getAttribute("human");
+
+%>
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>リクエストスコープJSP</title>
+</head>
+<body>
+<p><%=h.getName() %>"さんは"<%=h.getAge() %>歳です</p>
+</body>
+</html>
+
+
+リクエストスコープの注意点
+
+  リクエストスコープは、一回のリクエスト、レスポンスの流れで
+  インスタンスが消えてしまいます。
+  フォワードの流れでは消えないですが、リダイレクトの際には
+  インスタンスが消えてしまいます。
