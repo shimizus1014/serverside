@@ -1,0 +1,158 @@
+セッションスコープとは
+
+  前章のリクエストスコープでは、有効期限がレスポンスまでと限られていたが、
+  セッションスコープは、有効期限を開発者が自由に設定できる。
+  レスポンス後も残せるため、リクエストをまたいで利用できます。
+
+
+セッションスコープの基本操作
+
+  セッションスコープの正体
+    javaxservlet.http.HttpSessionインスタンスのメソッドを使用して
+    セッションスコープを操作します
+
+  セッションスコープを利用する
+    //HttpSessionインスタンスを取得※Humanクラスはインスタンス化済とする。
+    HttpSession session=request.getSession();
+    
+    //セッションスコープにインスタンスを保存
+    session.setAttribute("human",human);
+    
+    //セッションスコープからインスタンスを取得
+    Human h=(Human)session.getAttribute("human");
+    
+    //★セッションスコープからインスタンスを削除
+    session.removeAttribute("human");※リクエストスコープとの相違点
+                             属性名を指定して
+                             インスタンスを削除できる！
+
+    ※jspファイルでも同様に扱える！jspファイルでは、暗黙オブジェクト「session]を使う。
+
+セッションスコープを用いたサンプルプログラムp.227～復習すること
+controllerサンプルプログラム
+
+package servlet;
+
+import java.io.IOException;
+
+import javax.servlet.RequestDispatcher;
+import javax.servlet.ServletException;
+import javax.servlet.annotation.WebServlet;
+import javax.servlet.http.HttpServlet;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+import javax.servlet.http.HttpSession;
+
+import model.RegisterUserLogic;
+import model.User;
+
+/**
+ * Servlet implementation class RegisterUser
+ */
+@WebServlet("/RegisterUser")
+public class RegisterUser extends HttpServlet {
+	private static final long serialVersionUID = 1L;
+
+    /**
+     * @see HttpServlet#HttpServlet()
+     */
+
+
+	/**
+	 * @see HttpServlet#doGet(HttpServletRequest request, HttpServletResponse response)
+	 */
+	protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
+		// TODO Auto-generated method stub
+		//response.getWriter().append("Served at: ").append(request.getContextPath());
+		/*
+		 * 今回は、リクエストパラメータの値の有無でフォワード先を変更するプログラム
+		 * を採用している。そのため、フォワード先を格納するフィールドを用意する必要がある。
+		 */
+
+		//フォワード先を格納する変数を用意
+		String forwardPath=null;
+
+		//サーブレットクラスの動作を決定する「action」のあたいを
+		//リクエストパラメータから取得
+		String action=request.getParameter("action");
+
+		//「登録の開始」をリクエストされた時の処理
+		if(action==null) {
+			//action指定なしの場合のフォワード先を指定
+			//ユーザーフォームのjspファイルへフォワード
+			forwardPath="/WEB-INF/registerForm.jsp";
+		}
+		//登録確認画面から「登録実行」をリクエストされた時の処理
+		else if(action.equals("done")) {
+			//セッションスコープに保存された登録ユーザーを取得
+			HttpSession session=request.getSession();
+			User registerUser=(User)session.getAttribute("registerUser");
+
+			//【追記】不正アクセスの対応
+            session.removeAttribute("msg");
+            System.out.println("不正アクセス対応の動作確認");
+            System.out.println("実行【true】：実行しない【false】");
+            boolean b=new java.util.Scanner(System.in).nextBoolean();
+            if(b) {
+            	registerUser=null;
+            }
+
+            if(registerUser==null) {
+            	session.setAttribute("msg","不正アクセスの可能性があります");
+            response.sendRedirect("/example08/RegisterUser");
+            return;
+            }
+			//登録処理の呼び出し
+			RegisterUserLogic logic=new RegisterUserLogic();
+			boolean success=logic.execute(registerUser);
+			System.out.println("登録の可否の動作確認");
+			System.out.println("〇 成功：【true】, × 失敗：【false】");
+			success=new java.util.Scanner(System.in).nextBoolean();
+			String message=success==true?"登録完了しました":"登録失敗しました";
+			request.setAttribute("message", message);
+
+			//不要となったセッションスコープ内のインスタンスを削除
+			session.removeAttribute("registerUser");
+
+			//登録完了フォワードを格納
+			forwardPath="/WEB-INF/registerDone.jsp";
+		}else {
+			//なにも値が入らなければ、nullで初期化しよう。
+			forwardPath=null;
+		}
+
+		//設定されたフォワード先にフォワード
+		//actionがnullの場合とDoneの場合でフォワード先を変更する
+		RequestDispatcher dispatcher=request.getRequestDispatcher(forwardPath);
+		dispatcher.forward(request, response);
+	}
+
+	/**
+	 * @see HttpServlet#doPost(HttpServletRequest request, HttpServletResponse response)
+	 */
+	protected void doPost(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
+		// TODO Auto-generated method stub
+		//doGet(request, response)
+
+		//registerFormからpostされた時に実行されるメソッド
+		//リクエストパラメータ取得
+		request.setCharacterEncoding("UTF-8");
+		String id=request.getParameter("id");
+		String name=request.getParameter("name");
+		String pass=request.getParameter("pass");
+
+		//登録するユーザーの情報を設定
+		User registerUser=new User(id,name,pass);
+
+		//セッションスコープに登録ユーザーを保存
+		HttpSession session=request.getSession();
+		session.setAttribute("registerUser", registerUser);
+
+		//登録結果へフォワード
+		RequestDispatcher dispatcher=
+				request.getRequestDispatcher("/WEB-INF/registerConfirm.jsp");
+		dispatcher.forward(request, response);
+
+	}
+
+}
