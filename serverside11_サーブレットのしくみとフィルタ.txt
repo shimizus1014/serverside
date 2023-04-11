@@ -1,0 +1,169 @@
+サーブレット実行のしくみ
+
+ サーブレットクラスのインスタンス化
+    サーブレットクラスは、static領域で管理されているメソッドがあるクラスでは
+    ありませんので、実際には、実行の際インスタンス化する必要があります。
+    ですが、アプリケーションサーバのサーブレットコンテナが自動的にインスタンス化
+    してくれています。
+    このインスタンスは、初回リクエスト時に生成され、サーバ停止まで再利用されます。
+    これを利用してインスタンスの生成時、破棄時に実行されるメソッドを活用できます。
+    init()メソッドとdestroy()メソッドです。
+
+
+init()メソッド
+
+ 初回リクエスト時
+   ・「init」メソッドはインスタンス作成後に一度だけ呼ばれるメソッド
+   ・インスタンス変数の初期化などに利用
+ 
+ initメソッドをオーバーライドするときの注意点
+   ※引数無と有のメソッドがある
+   ・public void init()
+   ・public void init(ServletConfig config)
+
+ ※引数ありのメソッドをオーバーライドする、つまり初期化に必要な
+   データを受け取る場合、必ずsuper.init(config)を呼び出す必要がある
+
+destroy()
+  Webアプリケーション終了時
+    ・サーブレットが破棄される前に呼び出されるのが「destroy」メソッド
+    ・インスタンス変数の値をファイルに書き出す
+    ・インスタンスで共有していたデータベース接続の切断処理を行う
+    
+  ※「init」メソッド・「destroy」メソッドは
+    「HttpServlet」クラスの親クラスである「GenericServlet」クラスで定義
+
+  サーブレットのライフサイクルとメソッド
+    初期化時   →     リクエスト時     →      終了時
+     init()        doGet()/doPost()          destroy()
+
+
+サーブレットクラスのフィールド
+  
+  サーブレットクラスも、通常クラスと同様に、フィールドを定義することができます。
+  しかし、2点の注意が必要です
+  
+  ・注意①：フィールドが利用できる範囲
+            他のサーブレットクラスやJSPファイルでは使用できない
+  ・注意②：フィールドの整合性
+            複数のリクエストで使用→フィールドが共有
+            ※複数のリクエストによって不整合が発生しやすい。
+
+
+リスナー
+
+  リスナーとは
+    javascriptのイベントリスナーや、SQLのトリガーのように、何かの
+    動作に対して実行されるクラスのことです。
+ 
+  リスナーのしくみ
+    ①イベント発生を監視
+    ②メソッドを実行
+
+  リスナーの作成方法
+    リスナーはあらかじめ用意されているリスナーインタフェースを実装して
+    作成します。実装するリスナーインタフェースによって、リスナーが対応
+    できるイベントが決まります。言い換えると、対応したいイベントに合わ
+    せて実装するリスナーインタフェースを決める必要があるのです
+    ※それぞれのリスナーインタフェースについてはp.326参照
+
+
+フィルタ
+  フィルタとは
+    サーブレットにはフィルタという特別なクラスが用意されています。
+    フィルタを、サーブレットクラスやjspファイル、htmlファイルに設定
+    すると、そのクラスのgetやpost等のメソッドが実行される前後に、
+    フィルタのメソッドが自動実行されます。
+
+  フィルタの用途
+    フィルタとは、複数のサーブレットクラスやjspファイルを実行する前に
+    実行したい「同様の処理」を一つのフィルタにまとめることができます。
+    例えば、ログイン確認や、リクエストパラメータ取得時の文字コード変更
+    等の処理を、1つのフィルタで定義し、様々なクラスに設定できます。
+
+  Filterインタフェースの実装
+  
+    実装すべき   呼ばれる        実装すべき内容
+    メソッド     タイミング
+    
+    init()       フィルタの     一度だけ呼ばれる→初期処理を記述する
+                 インスタンス化 FilterConfigが引数に設定されているメソッドはこのメソッド
+                 された直後     のみなので、初期化パラメータの取得はここで行う
+                 
+    destroy()    フィルタの     終了時に一度だけ呼ばれる
+                 インスタンスが フィルタが保持しているデータがあれば、ここで解放すべき
+                 破棄される     だが、基本的にフィルタで保持するデータで解放が必要な
+                 直前           データは無いはず
+    
+    dofilter()   サーブレットが リクエストにつき1回呼ばれる（内部でサーブレットが何回
+                 呼ばれる前     フォワードしても、フィルタは1回のみ）
+                                フィルタは複数定義できるので、次のフィルタを実行する
+                                ために、chain.doFilter()を呼び出す必要がある
+                                （一番末端のフィルタでサーブレットが呼び出される。
+                                逆に、処理を中断したければ chain.doFilter() を呼び
+                                出さない→return文）
+                                chain.doFilter()の前に記述すれば前処理、
+                                                  後に記述すれば後処理になる
+                                                  
+フィルタ例文
+package filter;
+
+import java.io.IOException;
+import java.io.PrintWriter;
+
+import javax.servlet.Filter;
+import javax.servlet.FilterChain;
+import javax.servlet.FilterConfig;
+import javax.servlet.ServletException;
+import javax.servlet.ServletRequest;
+import javax.servlet.ServletResponse;
+import javax.servlet.annotation.WebFilter;
+
+/**
+ * Servlet Filter implementation class FilterSample
+ */
+@WebFilter("/FormSampleServlet")
+public class FilterSample implements Filter {
+
+    /**
+     * Default constructor.
+     */
+    public FilterSample() {
+        // TODO Auto-generated constructor stub
+    }
+
+	/**
+	 * @see Filter#destroy()
+	 */
+	public void destroy() {
+		// TODO Auto-generated method stub
+	}
+
+	/**
+	 * @see Filter#doFilter(ServletRequest, ServletResponse, FilterChain)
+	 */
+	public void doFilter(ServletRequest request, ServletResponse response, FilterChain chain) throws IOException, ServletException {
+		// TODO Auto-generated method stub
+		// place your code here
+		//chain.doFilterの前に記述（前処理）
+		request.setCharacterEncoding("UTF-8");
+
+		// pass the request along the filter chain
+		chain.doFilter(request, response);
+		//後処理
+		response.setContentType("text/html; charset=UTF-8");
+		PrintWriter out=response.getWriter();
+		out.println("<p><b>ご利用、ありがとうございました。</b></p>");
+		out.println("</body>");
+		out.println("</html>");
+	}
+
+	/**
+	 * @see Filter#init(FilterConfig)
+	 */
+	public void init(FilterConfig fConfig) throws ServletException {
+		// TODO Auto-generated method stub
+	}
+
+}
+
