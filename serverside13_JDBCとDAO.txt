@@ -1,0 +1,122 @@
+JDBC(Java Database Connectivity)
+
+  JDBCとは
+    Javaプログラムでデータベースを利用する方法として、
+    JDBCプログラムというものがあります。
+    Javaプログラムでデータベースを利用するために、
+    SQL文を送信して結果を取得する必要があります。
+    それを可能にする、java.sqlパッケージを使用していきます。
+
+
+今回準備するデータベースのソフトウェア(H2)
+H2 Database(H2DB)
+
+  ・H2 DBを起動する方法
+    H2 Console(Command Line) )
+      コマンドラインベ０スでJava VMが起動し、その上でH2 DBが
+      起動するとともに、内臓のWebサーバも起動する。
+      コマンドラインの画面を閉じると、非常駐モードで動作する。
+   
+    H2 Console )
+      WindowsベースでJava VMを起動するので、コマンドプロンプト
+      の画面は開かずに、内臓のWebサーバが起動する。
+      Webサーバを閉じても、常駐している。
+
+  ・H2 DBに接続する方法
+    組み込みモード）特定の業務システムあるいは業務環境に組み込んで使う
+                    ときのモード
+
+    サーバーモード）通常のデータベースサーバーとして動作するモード
+    
+    
+JDBC Javaアプリケーションからデータベースを操作するAPI
+  ①DriverManager:DBMSへの接続準備を行う
+  ②Connection：DBMSへの接続や切断を行う
+  ③PreparedStatement:SQLの送信を行う
+  ④ResultSet:DBMSから検索結果を受け取る
+  ⑤SQLEwception:データベースに関するエラー情報を提供する
+                ＋
+    ・JDBCドライバと呼ばれるライブラリ（JARファイル）が必要
+
+JDBCプログラムの例
+package database;
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+
+public class SelectEmployeeSample {
+
+	public static void main(String[] args) {
+	 //データベースに接続
+
+		//データベースに接続
+		//サーバーモードは、H2 Databaseを起動（常駐）させておく必要あり！
+		try(Connection conn=DriverManager.getConnection(
+				"jdbc:h2:tcp://localhost/~/Documents/data/example","sa","")){
+									//  ↑ユーザフォルダ直下
+		/*
+		 * ★組み込みモードは、H2 Databaseを終了（非常駐）させておく！
+		 * ※通知領域に居座っていないか、確認することを忘れずに！*/
+	//	  Connection conn=DriverManager.getConnection(
+		 // "jdbc:h2:file:~/Documents/data/example","sa","")){
+		 //	"jdbc:h2:file:./data/example","sa","")){
+		 //                   ↑プロジェクト直下
+
+			//SELECT文を準備
+			String sql="SELECT ID,NAME,AGE  ROM EMPLOYEE";
+			PreparedStatement pStmt=conn.prepareStatement(sql);
+
+			//SELECTを実行し、結果票(ResultSet)を取得
+			ResultSet rs=pStmt.executeQuery();
+
+			//結果票に格納されたレコードの内容を表示
+			while(rs.next()){
+				String id=rs.getString("ID");
+				String name=rs.getString("NAME");
+				int age=rs.getInt("AGE");
+
+				//取得したデータを出力
+				System.out.println("ID:"+id);
+				System.out.println("名前:"+name);
+				System.out.println("年齢:"+age+"\n");
+			}
+		}catch(SQLException e) {
+			e.printStackTrace();
+		}
+	}
+
+}
+
+  JDBCプログラムの流れ
+    
+          Class    ：JDBCドライバの読み込み（JDK6以降不要）
+          forName()  ↑libに入れてるファイルのこと
+            ↓
+          DriverManager ：データベースに接続
+                          getConnection()
+            ↓
+          Connection : SQLの発行の準備
+                       prepareStatement()
+            ↓
+          PreparedStatement
+           ↓         ↓
+         更新        検索（SELECT)
+         INSERT      executeQuery()
+         UPDATE       ↓
+         DELETE      ResultSet→結果を格納
+           ↓
+    executeUpdate()
+
+
+DAOパターン
+
+  DAOパターンとは
+    JDBCプログラムの記述の多さや、可読性の悪さを改善するために、
+    Database関連の処理は、まとめておこうという設計上の考え方です。
+  
+  DAOパターンによる解決
+    DAO(Data Access Object)と呼ばれる、データベースの操作（テーブルに
+    対する検索、追加、更新、削除など）を担当するクラスを用意します。
+    データベースを利用する際は、必ずDAOを介して利用するようにします。
